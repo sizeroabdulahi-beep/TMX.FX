@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deriv-inspired · M-Pesa Trader</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg-deep: #0a0f16;
+      --bg-card: #111925;
+      --bg-elevated: #162030;
+      --border-subtle: #1f2d3d;
+      --text-primary: #e8edf5;
+      --text-secondary: #8a9bb0;
+      --accent-blue: #3b7cf5;
+      --accent-green: #16c784;
+      --accent-red: #ea3943;
+      --mpesa-green: #00a651;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    /* ===== LOGIN OVERLAY (DERIV-STYLE MINIMAL) ===== */
+    .login-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(6, 9, 14, 0.97);
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      transition: opacity 0.35s;
+    }
+
+    .login-card {
+      background: var(--bg-card);
+      border-radius: 24px;
+      width: 400px;
+      max-width: 94%;
+      padding: 40px 32px 36px;
+      text-align: center;
+      border: 1px solid var(--border-subtle);
+      box-shadow: 0 40px 80px -20px #000;
+    }
+
+    .login-card .brand {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+
+    .login-card .brand-icon {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(145deg, #3b7cf5, #1e5ad4);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      color: #fff;
+    }
+
+    .login-card .brand-name {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .login-card h2 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .login-card .sub {
+      color: var(--text-secondary);
+      font-size: 13px;
+      margin-bottom: 28px;
+    }
+
+    .mpesa-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(0, 166, 81, 0.12);
+      border: 1px solid rgba(0, 166, 81, 0.25);
+      padding: 8px 18px;
+      border-radius: 40px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--mpesa-green);
+      margin-bottom: 24px;
+    }
+
+    .field {
+      text-align: left;
+      margin-bottom: 16px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 6px;
+      margin-left: 4px;
+    }
+
+    .field input {
+      width: 100%;
+      background: var(--bg-deep);
+      border: 1px solid var(--border-subtle);
+      border-radius: 14px;
+      padding: 14px 16px;
+      font-size: 15px;
+      color: var(--text-primary);
+      outline: none;
+      transition: border 0.2s, box-shadow 0.2s;
+    }
+
+    .field input:focus {
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 3px rgba(59, 124, 245, 0.12);
+    }
+
+    .field input::placeholder { color: #3d4d60; }
+
+    .login-btn {
+      width: 100%;
+      background: linear-gradient(145deg, #3b7cf5, #1e5ad4);
+      border: none;
+      color: #fff;
+      font-weight: 700;
+      font-size: 15px;
+      padding: 16px;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 12px 24px -8px rgba(59, 124, 245, 0.4);
+    }
+
+    .login-btn:hover:not(:disabled) {
+      background: linear-gradient(145deg, #4d8aff, #2868e8);
+      transform: translateY(-1px);
+    }
+
+    .login-btn:disabled { opacity: 0.65; cursor: not-allowed; }
+
+    .login-footnote {
+      margin-top: 22px;
+      font-size: 11px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    /* ===== MAIN DASHBOARD ===== */
+    .dashboard {
+      max-width: 1480px;
+      width: 100%;
+      display: none;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 4px 20px;
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .topbar-left .mini-logo {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(145deg, #3b7cf5, #1e5ad4);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: #fff;
+    }
+
+    .topbar-left .app-name {
+      font-weight: 700;
+      font-size: 20px;
+      letter-spacing: -0.4px;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .search-pill {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      padding: 9px 18px;
+      border-radius: 40px;
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    .search-pill input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-primary);
+      font-size: 14px;
+      width: 180px;
+    }
+
+    .search-pill input::placeholder { color: #3d4d60; }
+
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 40px;
+      background: linear-gradient(135deg, #2b3e5a, #1a2a40);
+      border: 2px solid var(--accent-blue);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 15px;
+      cursor: pointer;
+    }
+
+    /* Grid */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 280px 1fr 300px;
+      gap: 16px;
+    }
+
+    @media (max-width: 1150px) {
+      .main-grid { grid-template-columns: 1fr 1fr; }
+      .right-panel { grid-column: span 2; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    }
+
+    @media (max-width: 720px) {
+      .main-grid { grid-template-columns: 1fr; }
+      .right-panel { grid-column: span 1; display: flex; flex-direction: column; }
+      .search-pill input { width: 100px; }
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      padding: 18px;
+    }
+
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .card-head h3 {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-secondary);
+    }
+
+    .card-head i { color: var(--text-secondary); font-size: 14px; cursor: pointer; }
+
+    /* Watchlist (Deriv-style tabs with color) */
+    .market-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 14px;
+      background: var(--bg-deep);
+      padding: 4px;
+      border-radius: 30px;
+    }
+
+    .market-tab {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 7px 10px;
+      border-radius: 30px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .market-tab.active {
+      background: var(--accent-blue);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(59, 124, 245, 0.3);
+    }
+
+    .market-tab:hover:not(.active) { color: var(--text-primary); }
+
+    .watch-items { display: flex; flex-direction: column; gap: 2px; }
+
+    .watch-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 10px;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: background 0.15s;
+      border-left: 3px solid transparent;
+    }
+
+    .watch-item:hover { background: var(--bg-elevated); }
+
+    .watch-item.active {
+      background: var(--bg-elevated);
+      border-left-color: var(--accent-blue);
+    }
+
+    .watch-symbol { font-weight: 700; font-size: 15px; }
+    .watch-name { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+
+    .watch-price { text-align: right; font-weight: 600; font-size: 15px; }
+    .watch-change { font-size: 12px; font-weight: 500; display: flex; align-items: center; justify-content: flex-end; gap: 3px; }
+
+    .up { color: var(--accent-green); }
+    .down { color: var(--accent-red); }
+
+    /* Center chart */
+    .chart-card { padding: 16px 16px 10px; }
+
+    .chart-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .pair-head { display: flex; align-items: center; gap: 12px; }
+
+    .pair-icon {
+      width: 42px;
+      height: 42px;
+      background: var(--bg-elevated);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      color: #f5b342;
+    }
+
+    .pair-head h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+    .pair-head .sub { font-size: 12px; color: var(--text-secondary); }
+
+    .time-tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--bg-deep);
+      padding: 4px;
+      border-radius: 30px;
+    }
+
+    .time-tab {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 30px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .time-tab.active { background: var(--accent-blue); color: #fff; }
+    .time-tab:hover:not(.active) { color: var(--text-primary); }
+
+    .chart-viewport {
+      background: var(--bg-deep);
+      border-radius: 16px;
+      padding: 12px 8px 6px;
+      border: 1px solid var(--border-subtle);
+      margin-bottom: 14px;
+    }
+
+    .candle-row {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      height: 170px;
+      gap: 3px;
+      padding: 8px 0;
+    }
+
+    .candle {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      height: 100%;
+      min-width: 5px;
+      transition: height 0.15s;
+    }
+
+    .candle-wick {
+      width: 2px;
+      background: #3f5168;
+      border-radius: 2px;
+      margin-bottom: 1px;
+      transition: height 0.15s;
+    }
+
+    .candle-body {
+      width: 9px;
+      border-radius: 2px;
+      transition: height 0.15s, background 0.15s;
+    }
+
+    .candle-body.green { background: var(--accent-green); box-shadow: 0 0 8px rgba(22, 199, 132, 0.25); }
+    .candle-body.red { background: var(--accent-red); box-shadow: 0 0 8px rgba(234, 57, 67, 0.2); }
+
+    .chart-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-secondary);
+      padding: 6px 4px 2px;
+      border-top: 1px solid var(--border-subtle);
+      margin-top: 4px;
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin: 14px 0 16px;
+    }
+
+    .stat-box {
+      background: var(--bg-deep);
+      border: 1px solid var(--border-subtle);
+      border-radius: 14px;
+      padding: 12px 14px;
+    }
+
+    .stat-box .lbl { font-size: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
+    .stat-box .val { font-weight: 700; font-size: 17px; }
+    .stat-box .val small { font-weight: 400; font-size: 11px; color: var(--text-secondary); margin-left: 4px; }
+
+    .trade-btns { display: flex; gap: 10px; }
+
+    .btn-trade {
+      flex: 1;
+      border: none;
+      padding: 15px;
+      border-radius: 14px;
+      font-weight: 700;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+
+    .btn-buy {
+      background: var(--accent-green);
+      color: #0a0f16;
+      box-shadow: 0 8px 18px -6px rgba(22, 199, 132, 0.35);
+    }
+
+    .btn-buy:hover { background: #1dd48e; transform: translateY(-1px); }
+
+    .btn-sell {
+      background: var(--accent-red);
+      color: #fff;
+      box-shadow: 0 8px 18px -6px rgba(234, 57, 67, 0.3);
+    }
+
+    .btn-sell:hover { background: #f04b55; transform: translateY(-1px); }
+
+    /* Right panel */
+    .orderbook-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 0;
+      font-size: 13px;
+      font-weight: 500;
+      position: relative;
+    }
+
+    .orderbook-row .px { font-weight: 600; color: #b8c9e0; }
+    .orderbook-row .qty { color: var(--text-secondary); font-weight: 400; }
+
+    .ask-px { color: var(--accent-red) !important; }
+    .bid-px { color: var(--accent-green) !important; }
+
+    .depth {
+      position: absolute;
+      right: 0;
+      top: 0;
+      height: 100%;
+      border-radius: 4px;
+      z-index: 0;
+    }
+
+    .depth-ask { background: rgba(234, 57, 67, 0.07); }
+    .depth-bid { background: rgba(22, 199, 132, 0.09); }
+
+    .spread-label {
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-secondary);
+      padding: 8px 0;
+      font-weight: 500;
+      letter-spacing: 1px;
+    }
+
+    .balance-box {
+      background: var(--bg-elevated);
+      border-radius: 16px;
+      padding: 16px;
+      margin-top: 12px;
+    }
+
+    .balance-box .lbl { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+
+    .balance-big {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -1px;
+      margin: 6px 0 8px;
+      background: linear-gradient(135deg, #fff, #b0c8e8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .balance-sub {
+      display: flex;
+      gap: 16px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .balance-sub i { margin-right: 4px; }
+
+    .deposit-btn {
+      width: 100%;
+      margin-top: 14px;
+      background: var(--mpesa-green);
+      border: none;
+      color: #fff;
+      font-weight: 700;
+      font-size: 14px;
+      padding: 13px;
+      border-radius: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.18s;
+    }
+
+    .deposit-btn:hover { background: #00b85a; transform: translateY(-1px); }
+
+    /* Bottom panels */
+    .bottom-row {
+      display: grid;
+      grid-template-columns: 1.6fr 1fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    @media (max-width: 720px) { .bottom-row { grid-template-columns: 1fr; } }
+
+    .trade-list { display: flex; flex-direction: column; gap: 4px; max-height: 150px; overflow-y: auto; }
+
+    .trade-line {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .trade-line:last-child { border-bottom: none; }
+    .trade-side { font-weight: 700; width: 48px; }
+    .trade-side.b { color: var(--accent-green); }
+    .trade-side.s { color: var(--accent-red); }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(12px);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      padding: 14px 26px;
+      border-radius: 40px;
+      font-size: 14px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 20px 40px -10px #000;
+      z-index: 2000;
+      opacity: 0;
+      transition: opacity 0.25s, transform 0.25s;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast i { color: var(--accent-green); }
+  </style>
+</head>
+<body>
+
+  <!-- LOGIN -->
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-card">
+      <div class="brand">
+        <div class="brand-icon"><i class="fas fa-chart-line"></i></div>
+        <div class="brand-name">Deriv</div>
+      </div>
+      <h2>Welcome back</h2>
+      <div class="sub">Sign in with your M-Pesa number</div>
+
+      <div class="mpesa-badge">
+        <i class="fas fa-mobile-alt"></i> Safaricom M-Pesa
+      </div>
+
+      <div class="field">
+        <label>Phone number</label>
+        <input type="tel" id="phoneInput" placeholder="+254 712 345 678" value="+254 712 345 678">
+      </div>
+
+      <div class="field">
+        <label>M-Pesa PIN</label>
+        <input type="password" id="pinInput" placeholder="••••" value="1234" maxlength="4">
+      </div>
+
+      <button class="login-btn" id="loginBtn">
+        <i class="fas fa-lock"></i> Log in securely
+      </button>
+
+      <div class="login-footnote">
+        <i class="fas fa-shield-alt"></i> 256-bit encrypted · Deriv verified
+      </div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="dashboard" id="dashboard">
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="mini-logo"><i class="fas fa-chart-line"></i></div>
+        <div class="app-name">Deriv Trader</div>
+      </div>
+      <div class="topbar-right">
+        <div class="search-pill">
+          <i class="fas fa-search"></i>
+          <input type="text" placeholder="Search markets..." id="searchInput">
+        </div>
+        <div class="user-avatar">JD</div>
+      </div>
+    </div>
+
+    <!-- MAIN GRID -->
+    <div class="main-grid">
+      <!-- LEFT: WATCHLIST -->
+      <div class="left-panel">
+        <div class="card">
+          <div class="card-head">
+            <h3><i class="fas fa-star" style="color:#f5b342; margin-right:6px;"></i> Watchlist</h3>
+            <i class="fas fa-sliders-h"></i>
+          </div>
+
+          <div class="market-tabs">
+            <button class="market-tab active">All</button>
+            <button class="market-tab">Crypto</button>
+            <button class="market-tab">Forex</button>
+          </div>
+
+          <div class="watch-items" id="watchlist"></div>
+        </div>
+      </div>
+
+      <!-- CENTER: CHART + TRADE -->
+      <div class="center-panel">
+        <div class="card chart-card">
+          <div class="chart-top">
+            <div class="pair-head">
+              <div class="pair-icon"><i class="fab fa-bitcoin"></i></div>
+              <div>
+                <h2>BTC/USD</h2>
+                <div class="sub">Bitcoin · Crypto</div>
+              </div>
+            </div>
+            <div class="time-tabs">
+              <button class="time-tab active">1H</button>
+              <button class="time-tab">4H</button>
+              <button class="time-tab">1D</button>
+              <button class="time-tab">1W</button>
+            </div>
+          </div>
+
+          <div class="chart-viewport">
+            <div class="candle-row" id="candleRow"></div>
+            <div class="chart-meta">
+              <span>24h Vol: <span id="volTxt">2.4B</span></span>
+              <span>24h Change: <span id="chgTxt" class="up">+3.24%</span></span>
+            </div>
+          </div>
+
+          <div class="stats-row">
+            <div class="stat-box">
+              <div class="lbl">24h High</div>
+              <div class="val">$68,420 <small>+1.2%</small></div>
+            </div>
+            <div class="stat-box">
+              <div class="lbl">24h Low</div>
+              <div class="val">$66,180 <small>-0.8%</small></div>
+            </div>
+            <div class="stat-box">
+              <div class="lbl">24h Volume</div>
+              <div class="val">$2.4B <small>BTC</small></div>
+            </div>
+          </div>
+
+          <div class="trade-btns">
+            <button class="btn-trade btn-buy" id="buyBtn"><i class="fas fa-arrow-up"></i> Buy</button>
+            <button class="btn-trade btn-sell" id="sellBtn"><i class="fas fa-arrow-down"></i> Sell</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: ORDERBOOK + BALANCE -->
+      <div class="right-panel">
+        <div class="card">
+          <div class="card-head">
+            <h3><i class="fas fa-list-ul" style="margin-right:6px;"></i> Order Book</h3>
+            <i class="fas fa-sync-alt" id="refreshBook" style="font-size:12px;"></i>
+          </div>
+          <div id="asksContainer"></div>
+          <div class="spread-label">— SPREAD 0.50 —</div>
+          <div id="bidsContainer"></div>
+
+          <!-- Balance -->
+          <div class="balance-box">
+            <div class="lbl">M-Pesa Balance</div>
+            <div class="balance-big" id="balDisplay">$12,480.50</div>
+            <div class="balance-sub">
+              <span><i class="fab fa-bitcoin" style="color:#f5b342;"></i> <span id="btcBal">0.182</span> BTC</span>
+              <span><i class="fas fa-dollar-sign" style="color:#16c784;"></i> <span id="usdtBal">2,140</span> USDT</span>
+            </div>
+            <button class="deposit-btn" id="depositBtn">
+              <i class="fas fa-plus-circle"></i> Deposit via M-Pesa
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOTTOM -->
+    <div class="bottom-row">
+      <div class="card">
+        <div class="card-head">
+          <h3><i class="fas fa-history" style="margin-right:6px;"></i> Recent Trades</h3>
+          <i class="fas fa-chevron-right"></i>
+        </div>
+        <div class="trade-list" id="tradeList"></div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h3><i class="fas fa-chart-pie"></i> Portfolio</h3>
+          <i class="fas fa-ellipsis-h"></i>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-top:8px;">
+          <div>
+            <div class="lbl" style="font-size:10px;color:var(--text-secondary);">Total P&L</div>
+            <div style="font-size:22px;font-weight:700;color:var(--accent-green);">+$1,240.32</div>
+          </div>
+          <div>
+            <div class="lbl" style="font-size:10px;color:var(--text-secondary);">24h Change</div>
+            <div style="font-size:22px;font-weight:700;color:var(--accent-green);">+3.8%</div>
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:14px; flex-wrap:wrap;">
+          <span style="background:var(--bg-elevated); padding:5px 14px; border-radius:30px; font-size:12px;">BTC 58%</span>
+          <span style="background:var(--bg-elevated); padding:5px 14px; border-radius:30px; font-size:12px;">ETH 24%</span>
+          <span style="background:var(--bg-elevated); padding:5px 14px; border-radius:30px; font-size:12px;">SOL 10%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast">
+    <i class="fas fa-check-circle"></i>
+    <span id="toastMsg">Ready</span>
+  </div>
+
+  <script>
+    (function() {
+      // ---------- STATE ----------
+      let balance = 12480.50;
+      let btc = 0.182;
+      let usdt = 2140;
+      let lastPrice = 67420.50;
+      let candles = [];
+      const CANDLE_COUNT = 24;
+      let chartTimer, balanceTimer, tradeTimer;
+      let loggedIn = false;
+
+      // ---------- DOM ----------
+      const overlay = document.getElementById('loginOverlay');
+      const dash = document.getElementById('dashboard');
+      const loginBtn = document.getElementById('loginBtn');
+      const phoneInp = document.getElementById('phoneInput');
+      const pinInp = document.getElementById('pinInput');
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toastMsg');
+      const balEl = document.getElementById('balDisplay');
+      const btcEl = document.getElementById('btcBal');
+      const usdtEl = document.getElementById('usdtBal');
+      const candleRow = document.getElementById('candleRow');
+      const volTxt = document.getElementById('volTxt');
+      const chgTxt = document.getElementById('chgTxt');
+
+      // ---------- TOAST ----------
+      function showToast(msg, ms = 2500) {
+        toastMsg.textContent = msg;
+        toast.classList.add('show');
+        clearTimeout(window._toastT);
+        window._toastT = setTimeout(() => toast.classList.remove('show'), ms);
+      }
+
+      // ---------- LOGIN ----------
+      loginBtn.addEventListener('click', function() {
+        const phone = phoneInp.value.trim();
+        const pin = pinInp.value.trim();
+        if (!phone || phone.length < 10) { showToast('Enter a valid M-Pesa number', 2000); return; }
+        if (!pin || pin.length < 4) { showToast('Enter your 4-digit M-Pesa PIN', 2000); return; }
+
+        loginBtn.disabled = true;
+        loginBtn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Sending STK push...';
+
+        setTimeout(() => {
+          overlay.style.opacity = '0';
+          setTimeout(() => {
+            overlay.style.display = 'none';
+            dash.style.display = 'block';
+            loggedIn = true;
+            showToast('Welcome back, John. M-Pesa verified.', 3000);
+            startEverything();
+          }, 350);
+        }, 1600);
+      });
+
+      [phoneInp, pinInp].forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') loginBtn.click(); }));
+
+      // ---------- WATCHLIST ----------
+      const markets = [
+        { sym: 'BTC/USD', name: 'Bitcoin', price: 67420.50, chg: 3.24, active: true },
+        { sym: 'ETH/USD', name: 'Ethereum', price: 3521.80, chg: 1.87 },
+        { sym: 'SOL/USD', name: 'Solana', price: 148.32, chg: -2.14 },
+        { sym: 'XRP/USD', name: 'Ripple', price: 0.5234, chg: -0.76 },
+        { sym: 'ADA/USD', name: 'Cardano', price: 0.4312, chg: 0.92 },
+        { sym: 'DOGE/USD', name: 'Dogecoin', price: 0.1824, chg: 5.12 },
+      ];
+
+      const wl = document.getElementById('watchlist');
+      markets.forEach(m => {
+        const div = document.createElement('div');
+        div.className = 'watch-item' + (m.active ? ' active' : '');
+        const cls = m.chg >= 0 ? 'up' : 'down';
+        const icon = m.chg >= 0 ? 'fa-caret-up' : 'fa-caret-down';
+        div.innerHTML = `
+          <div>
+            <div class="watch-symbol">${m.sym}</div>
+            <div class="watch-name">${m.name}</div>
+          </div>
+          <div>
+            <div class="watch-price">$${m.price.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</div>
+            <div class="watch-change ${cls}"><i class="fas ${icon}"></i> ${Math.abs(m.chg).toFixed(2)}%</div>
+          </div>
+        `;
+        div.addEventListener('click', function() {
+          document.querySelectorAll('.watch-item').forEach(x => x.classList.remove('active'));
+          this.classList.add('active');
+        });
+        wl.appendChild(div);
+      });
+
+      // ---------- BUILD CAND
